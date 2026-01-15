@@ -44,6 +44,7 @@ Some features require authentication to access your personal library, playlists,
 1. **Create OAuth credentials** in the [Google Cloud Console](https://console.cloud.google.com/):
    - Create a new project (or use an existing one)
    - Enable the YouTube Data API v3
+   - If app is unpublished, add your email in Google Auth Platform/Audience/Test Users
    - Create OAuth 2.0 credentials (TV/Limited Input device)
    - Download the JSON file
 

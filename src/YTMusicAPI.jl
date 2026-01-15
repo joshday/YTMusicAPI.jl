@@ -13,7 +13,7 @@ export OAuthCredentials, OAuthToken
 export get_library_playlists, get_library_songs, get_library_albums, get_library_artists
 export get_liked_songs, get_history, Playlist, LibraryItem
 # Playlist management exports (authenticated)
-export create_playlist, add_playlist_items, remove_playlist_items, delete_playlist, get_playlist
+export create_playlist, add_playlist_items, remove_playlist_items, delete_playlist, get_playlist, get_playlist_songs
 
 #-----------------------------------------------------------------------------# Types
 const Maybe{T} = Union{T, Nothing}
@@ -2199,6 +2199,50 @@ function parse_playlist_contents(response::Dict, limit::Int)
 
     return (playlistId=playlist_id, title=title, description=description, trackCount=track_count, tracks=tracks)
 end
+
+"""
+    get_playlist_songs(yt::YTMusic, playlist_id::String; limit=100) -> Vector{Song}
+
+Get songs from a playlist as full Song objects with detailed metadata.
+
+This function fetches the playlist contents and then retrieves full song details
+for each track that has a valid videoId.
+
+# Arguments
+- `yt::YTMusic`: YouTube Music client
+- `playlist_id::String`: The playlist ID (or browse ID starting with "VL")
+- `limit::Int`: Maximum number of songs to return (default: 100)
+
+# Returns
+A Vector of `Song` objects with full metadata (title, artist, duration, etc.)
+
+# Example
+```julia
+songs = get_playlist_songs(yt, "PLxxxxx"; limit=10)
+for song in songs
+    println(song.title, " by ", song.artist, " (", song.lengthSeconds, "s)")
+end
+```
+"""
+function get_playlist_songs(yt::YTMusic, playlist_id::String; limit::Int=100)
+    playlist = get_playlist(yt, playlist_id; limit=limit)
+    songs = Song[]
+
+    for track in playlist.tracks
+        track.videoId === nothing && continue
+        try
+            song = get_song(yt, track.videoId)
+            push!(songs, song)
+        catch e
+            # Skip tracks that can't be fetched (e.g., unavailable videos)
+            @debug "Could not fetch song $(track.videoId): $e"
+        end
+    end
+
+    return songs
+end
+
+get_playlist_songs(playlist_id::String; limit::Int=100) = get_playlist_songs(yt, playlist_id; limit=limit)
 
 function parse_playlist_track_with_set_id(renderer::AbstractDict)
     videoId = nothing
